@@ -1,0 +1,591 @@
+/* ╔══════════════════════════════════════════════════════════════════════════╗
+   ║                                                                          ║
+   ║        ███████╗███████╗███╗   ██╗                                        ║
+   ║        ╚══███╔╝██╔════╝████╗  ██║                                        ║
+   ║          ███╔╝ █████╗  ██╔██╗ ██║                                        ║
+   ║         ███╔╝  ██╔══╝  ██║╚██╗██║                                        ║
+   ║        ███████╗███████╗██║ ╚████║                                        ║
+   ║        ╚══════╝╚══════╝╚═╝  ╚═══╝                                        ║
+   ║                                                                          ║
+   ║   ⚡ Z E N   H Y P E R   M O T I O N   U I   ───   V E R S I O N  2.5  ⚡ ║
+   ║   ────────────────────────────────────────────────────────────────────   ║
+   ║   ✦ Pure Traffic Lights ──► Elastic Vertical Pill Morph Animation      ║
+   ║   ✦ Dynamic Window State Toggle Fix (Sizemode Corrected)               ║
+   ║   ✦ HyperOS 4 Spring Physics Motion Engine Integration                 ║
+   ║   ✦ Ambient Breathing LED Pulse Tab Indicator                          ║
+   ║   ✦ True Glassmorphism Panel Blur + Total Purple Focus Annihilation    ║
+   ║   ────────────────────────────────────────────────────────────────────   ║
+   ║   📦 Project    : Zen HyperMotion CSS                                  ║
+   ║   ⚖️ License    : MIT                                                  ║
+   ║   🌐 Compatible : Zen Browser / Firefox 115+                           ║
+   ╚══════════════════════════════════════════════════════════════════════════╝ */
+
+/* ============================================================================
+   § MOTION TOKENS (HyperOS 4 + Spring Physics Engine)
+   ============================================================================ */
+:root {
+  --h4-press: 80ms cubic-bezier(0.30, 0.00, 1.00, 1.00);
+  --h4-out: 420ms cubic-bezier(0.05, 0.70, 0.10, 1.00);
+  --h4-std: 380ms cubic-bezier(0.20, 0.00, 0.00, 1.00);
+  --h4-spring: 480ms cubic-bezier(0.34, 1.30, 0.64, 1.00);
+  --h4-micro: 220ms cubic-bezier(0.20, 0.00, 0.00, 1.00);
+  --h4-accent: var(--zen-primary-color, AccentColor);
+
+  /* Super Smooth Spring Curves */
+  --spring-fast: cubic-bezier(0.16, 1.0, 0.3, 1);
+  --spring-gentle: cubic-bezier(0.34, 1.2, 0.55, 1);
+  --spring-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --spring-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-normal: 320ms;
+
+  /* ========== PURPLE BORDER VARIABLES ANNIHILATION ========== */
+  --toolbar-field-border-color: transparent !important;
+  --toolbar-field-focus-border-color: transparent !important;
+  --focus-outline-color: transparent !important;
+  --focus-outline: none !important;
+  --urlbar-box-focus-border-color: transparent !important;
+}
+
+/* ============================================================================
+   § 1. CONTAINER — Flexbox Full-Height Align
+   ============================================================================ */
+.titlebar-buttonbox-container,
+.titlebar-buttonbox {
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+  height: 100% !important;
+  overflow: visible !important;
+}
+
+/* ============================================================================
+   § 2. ICON WIPEOUT — Hide Native Assets Cleanly
+   ============================================================================ */
+.titlebar-button *,
+.titlebar-button > .toolbarbutton-icon,
+.titlebar-button-icon {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* ============================================================================
+   § 2b. STRICT 3-BUTTONS RULE (Sizemode Restore/Max Dynamic Toggle)
+   ============================================================================ */
+/* When window is maximized -> Hide Maximize button, Show Restore button */
+#main-window[sizemode="maximized"] .titlebar-max,
+:root[sizemode="maximized"] .titlebar-max {
+  display: none !important;
+}
+
+/* When window is windowed/normal -> Hide Restore button, Show Maximize button */
+#main-window:not([sizemode="maximized"]) .titlebar-restore,
+:root:not([sizemode="maximized"]) .titlebar-restore {
+  display: none !important;
+}
+
+/* ============================================================================
+   § 3. BASE HITBOX — Absolute Symmetrical Click Targets
+   ============================================================================ */
+.titlebar-button {
+  appearance: none !important;
+  -moz-appearance: none !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: default !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+}
+
+/* ============================================================================
+   § 3b. VISUAL DOTS — Styled on Pseudo Elements
+   ============================================================================ */
+.titlebar-button::before {
+  content: "" !important;
+  display: block !important;
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 999px !important;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.2) !important;
+  transition: 
+    height 0.45s var(--spring-elastic),
+    min-height 0.45s var(--spring-elastic),
+    background-color 0.35s var(--spring-smooth),
+    box-shadow 0.4s var(--spring-smooth),
+    transform 0.25s var(--spring-gentle) !important;
+}
+
+/* ============================================================================
+   § 4. NEON LIGHT VISUAL COLORS
+   ============================================================================ */
+.titlebar-close::before {
+  background-color: #ff4757 !important;
+}
+.titlebar-min::before {
+  background-color: #ffc212 !important;
+}
+.titlebar-max::before,
+.titlebar-restore::before {
+  background-color: #2ed573 !important;
+}
+
+/* ============================================================================
+   § 5. HOVER STATE — Vertical Pill Morph on Hover
+   ============================================================================ */
+.titlebar-button:hover::before {
+  height: 26px !important;
+  min-height: 26px !important;
+  transform: scale(1.15) translateY(-0.5px) !important;
+}
+.titlebar-close:hover::before {
+  background-color: #ff3344 !important;
+  box-shadow: 0 0 14px rgba(255, 71, 87, 0.65) !important;
+}
+.titlebar-min:hover::before {
+  background-color: #ffaa00 !important;
+  box-shadow: 0 0 14px rgba(255, 194, 18, 0.65) !important;
+}
+.titlebar-max:hover::before,
+.titlebar-restore:hover::before {
+  background-color: #1fc160 !important;
+  box-shadow: 0 0 14px rgba(46, 213, 115, 0.65) !important;
+}
+
+/* ============================================================================
+   § 6. CLICK STATE — Elastic Push Feedback
+   ============================================================================ */
+.titlebar-button:active::before {
+  transform: scale(0.82) translateY(0) !important;
+  transition-duration: 80ms !important;
+  transition-timing-function: var(--spring-fast) !important;
+}
+
+/* ============================================================================
+   § 7. SIDEBAR — Prevent Hover Trigger in Top 25px
+   ============================================================================ */
+#sidebar-box[collapsed="true"],
+#zen-sidebar-web-panel[collapsed="true"],
+.sidebar-panel[collapsed="true"],
+#tabbrowser-sidebar[collapsed="true"] {
+  clip-path: inset(25px 0px 0px 0px) !important;
+}
+
+
+/* ============================================================================
+   § 8. ZEN / FIREFOX — HyperOS 4 MOTION ENGINE
+   ============================================================================ */
+
+/* ━━━ 1) TOOLBAR BUTTONS — HyperOS Press Feel ━━━ */
+.toolbarbutton-1 .toolbarbutton-icon,
+.toolbarbutton-1 .toolbarbutton-badge-stack,
+#tabs-newtab-button .toolbarbutton-icon,
+#new-tab-button .toolbarbutton-icon,
+#alltabs-button .toolbarbutton-icon,
+#PanelUI-menu-button .toolbarbutton-icon,
+#unified-extensions-button .toolbarbutton-icon,
+#downloads-button .toolbarbutton-icon,
+#identity-icon,
+#tracking-protection-icon,
+#reload-button .toolbarbutton-icon,
+#stop-button .toolbarbutton-icon,
+#back-button .toolbarbutton-icon,
+#forward-button .toolbarbutton-icon {
+  transform-origin: center !important;
+  transition: transform var(--h4-spring) !important;
+}
+
+.toolbarbutton-1:hover .toolbarbutton-icon,
+.toolbarbutton-1:hover .toolbarbutton-badge-stack,
+#tabs-newtab-button:hover .toolbarbutton-icon,
+#new-tab-button:hover .toolbarbutton-icon,
+#PanelUI-menu-button:hover .toolbarbutton-icon,
+#unified-extensions-button:hover .toolbarbutton-icon,
+#downloads-button:hover .toolbarbutton-icon {
+  transform: scale(1.1) rotate(-2deg) !important;
+  transition: transform 0.35s var(--spring-elastic) !important;
+}
+
+.toolbarbutton-1:active .toolbarbutton-icon,
+.toolbarbutton-1:active .toolbarbutton-badge-stack,
+#tabs-newtab-button:active .toolbarbutton-icon,
+#new-tab-button:active .toolbarbutton-icon,
+#PanelUI-menu-button:active .toolbarbutton-icon,
+#unified-extensions-button:active .toolbarbutton-icon,
+#downloads-button:active .toolbarbutton-icon,
+#back-button:active .toolbarbutton-icon,
+#forward-button:active .toolbarbutton-icon,
+#reload-button:active .toolbarbutton-icon {
+  transform: scale(0.85) rotate(2deg) !important;
+  transition: transform 0.08s var(--spring-fast) !important;
+}
+
+.toolbarbutton-1,
+#tabs-newtab-button,
+#new-tab-button {
+  transition:
+    background-color var(--h4-micro),
+    box-shadow var(--h4-out) !important;
+}
+
+/* ━━━ 2) TABS — Silky Morph & Fade ━━━ */
+.tabbrowser-tab {
+  transition: 
+    opacity 0.3s var(--spring-smooth),
+    min-width 0.35s var(--spring-smooth),
+    max-width 0.35s var(--spring-smooth),
+    transform 0.3s var(--spring-gentle) !important;
+}
+
+.tabbrowser-tab:not([selected]) {
+  opacity: 0.5 !important;
+  transform: scale(0.98) !important;
+}
+.tabbrowser-tab:not([selected]):hover {
+  opacity: 0.85 !important;
+  transform: scale(1) translateX(2px) !important;
+}
+.tabbrowser-tab[selected] {
+  opacity: 1 !important;
+  transform: scale(1.0) !important;
+  transition-duration: 0.4s !important;
+}
+
+.tabbrowser-tab .tab-background {
+  position: relative !important;
+  overflow: hidden !important;
+  transition: 
+    background-color 0.35s var(--spring-smooth),
+    box-shadow 0.45s var(--spring-elastic),
+    border-color 0.35s ease,
+    opacity var(--h4-micro) !important;
+}
+
+.tabbrowser-tab .tab-label {
+  transition: opacity var(--h4-micro), color var(--h4-micro) !important;
+}
+
+.tabbrowser-tab:not([selected]):hover .tab-background {
+  background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
+}
+
+.tabbrowser-tab[selected] .tab-background {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--h4-accent) 28%, transparent),
+    0 6px 16px color-mix(in srgb, var(--h4-accent) 12%, transparent) !important;
+}
+
+/* LED Line — Selected Tab Pulse Breathing Glow */
+.tabbrowser-tab .tab-background::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 18% !important;
+  right: 18% !important;
+  height: 2px !important;
+  border-radius: 99px !important;
+  background: var(--h4-accent) !important;
+  opacity: 0 !important;
+  transform: scaleX(0.35) !important;
+  transform-origin: center !important;
+  pointer-events: none !important;
+  transition:
+    opacity var(--h4-out),
+    transform var(--h4-spring),
+    box-shadow var(--h4-out) !important;
+}
+
+.tabbrowser-tab[selected] .tab-background::before {
+  opacity: 1 !important;
+  transform: scaleX(1) !important;
+  animation: h4-led 3.0s ease-in-out infinite !important;
+}
+
+:root[zen-vertical-tabs="true"] .tabbrowser-tab .tab-background::before,
+#main-window[zen-vertical-tabs="true"] .tabbrowser-tab .tab-background::before {
+  top: 16% !important;
+  bottom: 16% !important;
+  left: 0 !important;
+  right: auto !important;
+  width: 2px !important;
+  height: auto !important;
+  transform: scaleY(0.35) !important;
+  transform-origin: center !important;
+}
+:root[zen-vertical-tabs="true"] .tabbrowser-tab[selected] .tab-background::before,
+#main-window[zen-vertical-tabs="true"] .tabbrowser-tab[selected] .tab-background::before {
+  transform: scaleY(1) !important;
+}
+
+@keyframes h4-led {
+  0%, 100% { 
+    opacity: 0.4; 
+    filter: brightness(0.9) blur(0.5px);
+    box-shadow: 0 0 6px var(--h4-accent);
+  }
+  50% { 
+    opacity: 1; 
+    filter: brightness(1.3) blur(0px);
+    box-shadow: 0 0 12px var(--h4-accent), 0 0 24px color-mix(in srgb, var(--h4-accent) 50%, transparent);
+  }
+}
+
+.tab-close-button,
+.tab-icon-overlay,
+.tab-icon-image,
+.tab-throbber {
+  transition: transform var(--h4-spring), opacity var(--h4-micro) !important;
+}
+.tab-close-button:hover {
+  transform: scale(1.12) !important;
+}
+.tab-close-button:active {
+  transform: scale(0.84) !important;
+  transition: transform var(--h4-press) !important;
+}
+
+.tabbrowser-tab[soundplaying] .tab-icon-overlay {
+  animation: h4-softpulse 2.6s ease-in-out infinite !important;
+}
+@keyframes h4-softpulse {
+  0%, 100% { transform: scale(1); opacity: 0.75; }
+  50%      { transform: scale(1.08); opacity: 1; }
+}
+
+
+/* ━━━ 3) URL BAR — Clean Native Styling (Inner Purple Box Annihilated) ━━━ */
+#urlbar-input,
+.urlbar-input-box,
+#urlbar-input-container,
+#urlbar-input-container *,
+#urlbar[focused] #urlbar-input,
+#urlbar[open] #urlbar-input,
+#urlbar-input:focus,
+#urlbar-input:focus-visible,
+#urlbar-input:-moz-focusring {
+  border: none !important;
+  border-color: transparent !important;
+  outline: none !important;
+  outline-style: none !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
+/* Outer urlbar border/outline removal */
+#urlbar,
+#urlbar-background,
+#urlbar-container,
+#urlbar[focused],
+#urlbar[open],
+#urlbar:focus-within,
+#urlbar[focused] #urlbar-background,
+#urlbar[open] #urlbar-background {
+  border-color: transparent !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+}
+
+#urlbar-background {
+  transition: 
+    background-color var(--duration-normal) var(--spring-smooth),
+    border-color var(--duration-normal) var(--spring-smooth),
+    box-shadow 0.45s var(--spring-elastic),
+    transform 0.35s var(--spring-smooth) !important;
+}
+
+#urlbar:hover:not([focused]) #urlbar-background {
+  transform: translateY(-0.5px) scale(1.005) !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, CanvasText 10%, transparent) !important;
+}
+
+/* Focused / open state — dynamic shadow, NO purple ring */
+#urlbar[focused] #urlbar-background,
+#urlbar[open] #urlbar-background {
+  border-color: transparent !important;
+  box-shadow:
+    0 10px 28px color-mix(in srgb, CanvasText 12%, transparent),
+    0 18px 40px color-mix(in srgb, CanvasText 8%, transparent) !important;
+}
+
+#urlbar-input,
+#urlbar-input-container,
+#identity-box,
+#page-action-buttons,
+#tracking-protection-icon-container {
+  transition: opacity var(--h4-micro), transform var(--h4-out) !important;
+}
+
+#urlbar[focused] #identity-box {
+  transform: translateX(1px) !important;
+}
+
+/* URL Bar Suggestion Rows — Smooth Slide Feedback */
+.urlbarView-row {
+  transition: 
+    transform 0.25s var(--spring-gentle), 
+    background-color 0.15s ease,
+    opacity 0.2s ease !important;
+}
+
+.urlbarView-row:hover {
+  transform: translateX(4px) scale(1.01) !important;
+}
+
+.urlbarView-row[selected] {
+  transform: translateX(6px) scale(1.015) !important;
+  transition-duration: 0.3s !important;
+}
+
+
+/* ━━━ 4) PANELS / MENUS — Glass Morphism Depth ━━━ */
+.panel-arrowcontent,
+panelview,
+#downloadsPanel-mainView,
+#appMenu-mainView,
+#identity-popup-mainView,
+#permission-popup-mainView,
+#protections-popup-mainView,
+#editBookmarkPanel {
+  background: color-mix(
+    in srgb,
+    var(--arrowpanel-background, Canvas) 78%,
+    transparent
+  ) !important;
+  backdrop-filter: blur(28px) saturate(1.35) !important;
+  -moz-backdrop-filter: blur(28px) saturate(1.35) !important;
+  animation: h4-enter 0.42s var(--spring-gentle) both !important;
+}
+
+menuitem,
+menu,
+.panel-subview-body toolbarbutton,
+.subviewbutton {
+  transition:
+    background-color var(--h4-micro),
+    transform var(--h4-out) !important;
+}
+
+menuitem:hover,
+menu:hover,
+menuitem[_moz-menuactive="true"],
+menu[_moz-menuactive="true"],
+.subviewbutton:hover {
+  transform: translateX(4px) scale(1.02) !important;
+  transition: transform 0.25s var(--spring-gentle), 
+              background-color 0.15s ease !important;
+}
+
+menuitem:active,
+.subviewbutton:active {
+  transform: translateX(4px) scale(0.97) !important;
+  transition: transform 0.1s var(--spring-fast) !important;
+}
+
+
+/* ━━━ 5) FIND BAR / SMALL POPUPS — Smooth Elastic Entry ━━━ */
+findbar {
+  animation: h4-enter 0.38s cubic-bezier(0.05, 0.70, 0.10, 1.00) both !important;
+}
+
+#confirmation-hint,
+#notification-popup,
+#appMenu-notification-popup {
+  animation: h4-enter 0.36s cubic-bezier(0.05, 0.70, 0.10, 1.00) both !important;
+}
+
+
+/* ━━━ 6) BOOKMARKS & TOOLBARS ━━━ */
+.bookmark-item {
+  transition:
+    background-color var(--h4-micro),
+    transform var(--h4-spring) !important;
+}
+.bookmark-item:hover {
+  transform: translateY(-1px) !important;
+}
+.bookmark-item:active {
+  transform: scale(0.96) !important;
+  transition: transform var(--h4-press) !important;
+}
+
+#PersonalToolbar,
+#nav-bar,
+#TabsToolbar {
+  transition: background-color var(--h4-std) !important;
+}
+
+
+/* ━━━ 7) DOWNLOADS PROGRESS — Neon Glass Shine ━━━ */
+.downloadProgress {
+  height: 3px !important;
+  border-radius: 99px !important;
+  overflow: hidden !important;
+  background: rgba(255,255,255,0.06) !important;
+  transition: background 0.3s ease !important;
+}
+.downloadProgress .progress-remainder {
+  background: linear-gradient(90deg, #00ffcc, var(--h4-accent)) !important;
+  border-radius: 99px !important;
+  transition: width 0.35s var(--spring-smooth) !important;
+}
+
+
+/* ━━━ 8) DOWNLOADS BUTTON — Attention State Glow ━━━ */
+#downloads-button[attention] .toolbarbutton-icon,
+#downloads-button[attention="success"] .toolbarbutton-icon {
+  animation: h4-softpulse 1.8s ease-in-out infinite !important;
+}
+
+
+/* ━━━ 9) GLOBAL FOCUS & SCROLLS ━━━ */
+:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--h4-accent) 40%, transparent) !important;
+  transition: box-shadow 0.2s ease !important;
+}
+* {
+  scroll-behavior: smooth !important;
+}
+
+@keyframes h4-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+
+/* ============================================================================
+   § 10. REDUCED MOTION — System Engine Sync
+   ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 80ms !important;
+    transition-timing-function: ease !important;
+  }
+  .titlebar-button:hover::before,
+  .toolbarbutton-1:hover .toolbarbutton-icon,
+  .tab-background:hover {
+    transform: none !important;
+  }
+}
