@@ -50,10 +50,10 @@
 
 ---
 
-### Step 3: Add userChrome.css
+### Step 3: Replace chrome folder
 1. Inside your profile folder, open or create a folder named **chrome**.
-2. Download or copy **userChrome.css** from this repository.
-3. Place **userChrome.css** inside the **chrome** folder.
+2. Download the zip from this repository.
+3. Replace **chrome** folder.
 4. **Restart Zen Browser!** 🎉
 
 ---
