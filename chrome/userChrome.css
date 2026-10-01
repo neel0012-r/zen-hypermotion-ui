@@ -1,0 +1,151 @@
+/* ============================================================
+   macOS Traffic-Light Window Controls
+   Close / Minimize / Maximize-Restore + Vertical Pill Hover
+   ============================================================ */
+
+:root {
+  --spring-fast: cubic-bezier(0.16, 1, 0.3, 1);
+  --spring-gentle: cubic-bezier(0.34, 1.2, 0.55, 1);
+  --spring-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --spring-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Window-control container */
+.titlebar-buttonbox-container,
+.titlebar-buttonbox {
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+  height: 100% !important;
+  overflow: visible !important;
+}
+
+/* Hide native window-control icons */
+.titlebar-button *,
+.titlebar-button > .toolbarbutton-icon,
+.titlebar-button-icon {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Maximized: show Restore, hide Maximize */
+#main-window[sizemode="maximized"] .titlebar-max,
+:root[sizemode="maximized"] .titlebar-max {
+  display: none !important;
+}
+
+/* Normal window: show Maximize, hide Restore */
+#main-window:not([sizemode="maximized"]) .titlebar-restore,
+:root:not([sizemode="maximized"]) .titlebar-restore {
+  display: none !important;
+}
+
+/* Symmetrical button hitboxes */
+.titlebar-button {
+  appearance: none !important;
+  -moz-appearance: none !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+
+  height: 100% !important;
+  min-height: 100% !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  cursor: default !important;
+}
+
+/* Traffic-light dots */
+.titlebar-button::before {
+  content: "" !important;
+  display: block !important;
+
+  width: 14px !important;
+  height: 14px !important;
+  min-height: 14px !important;
+
+  border-radius: 999px !important;
+
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04),
+    0 2px 8px rgba(0, 0, 0, 0.2) !important;
+
+  transition:
+    height 450ms var(--spring-elastic),
+    min-height 450ms var(--spring-elastic),
+    background-color 350ms var(--spring-smooth),
+    box-shadow 400ms var(--spring-smooth),
+    transform 250ms var(--spring-gentle) !important;
+}
+
+/* Close */
+.titlebar-close::before {
+  background-color: #ff4757 !important;
+}
+
+/* Minimize */
+.titlebar-min::before {
+  background-color: #ffc212 !important;
+}
+
+/* Maximize / Restore */
+.titlebar-max::before,
+.titlebar-restore::before {
+  background-color: #2ed573 !important;
+}
+
+/* Vertical pill hover */
+.titlebar-button:hover::before {
+  height: 26px !important;
+  min-height: 26px !important;
+  transform: scale(1.15) translateY(-0.5px) !important;
+}
+
+/* Close hover */
+.titlebar-close:hover::before {
+  background-color: #ff3344 !important;
+  box-shadow: 0 0 14px rgba(255, 71, 87, 0.65) !important;
+}
+
+/* Minimize hover */
+.titlebar-min:hover::before {
+  background-color: #ffaa00 !important;
+  box-shadow: 0 0 14px rgba(255, 194, 18, 0.65) !important;
+}
+
+/* Maximize / Restore hover */
+.titlebar-max:hover::before,
+.titlebar-restore:hover::before {
+  background-color: #1fc160 !important;
+  box-shadow: 0 0 14px rgba(46, 213, 115, 0.65) !important;
+}
+
+/* Click feedback */
+.titlebar-button:active::before {
+  transform: scale(0.82) translateY(0) !important;
+  transition-duration: 80ms !important;
+  transition-timing-function: var(--spring-fast) !important;
+}
+
+/* Reduced-motion support */
+@media (prefers-reduced-motion: reduce) {
+  .titlebar-button::before {
+    transition-duration: 80ms !important;
+    transition-timing-function: ease !important;
+  }
+
+  .titlebar-button:hover::before {
+    transform: none !important;
+  }
+}

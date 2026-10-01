@@ -1,0 +1,285 @@
+/**
+ * @file Manages Sine auto-updates.
+ * @license
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+const ucAPI = ChromeUtils.importESModule(
+  "chrome://userscripts/content/utils/uc_api.sys.mjs"
+).default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.sys.mjs").default;
+
+export default {
+  dataFile: PathUtils.join(utils.jsDir, "engine.json"),
+  updaterName: `updater.${ucAPI.utils.os === "win" ? "bat" : "sh"}`,
+  tmpFolder: PathUtils.join(ucAPI.utils.chromeDir, "tmp"),
+
+  /**
+   * Converts a version tag into an array of version numbers.
+   *
+   * @param {string} version - Version tag.
+   * @returns {Array} Array of version numbers.
+   */
+  convertToParts(version) {
+    return version.replace("c", "").split(".").map(Number);
+  },
+
+  /**
+   * Converts a version tag into one to be displayed on a toast.
+   *
+   * @param {string} version - Version tag.
+   * @returns {string} Readable version tag.
+   */
+  toReadable(version) {
+    const cosineStr = version.endsWith("c") ? "c" : "";
+
+    const parts = this.convertToParts(version);
+    // Remove patch number from version.
+    parts.pop();
+    // If there is no third part, remove it (0 is falsy).
+    if (!parts[2]) {
+      parts.pop();
+    }
+
+    return parts.join(".") + cosineStr;
+  },
+
+  /** Initializes updates object and update branch. */
+  async init() {
+    if (this.current) return;
+
+    this.current = await IOUtils.readJSON(this.dataFile).then((res) => res.version);
+    this.latest = this.current;
+
+    if (Services.prefs.getPrefType("sine.is-cosine") === 0) {
+      Services.prefs.setBoolPref("sine.is-cosine", this.current.endsWith("c"));
+    }
+  },
+
+  /**
+   * Performs a zip-based update.
+   *
+   * @param {object} engine - Entire engine.json object, including the update.
+   * @param {object} update - Update to be installed.
+   */
+  async zipUpdate(engine, update) {
+    const engineLink =
+      engine.releaseLink.replace("{version}", update.version) +
+      (update.overwrites?.enginePath || engine.enginePath);
+    const profileLink =
+      engine.bootloaderLink.replace(
+        "{version}",
+        update.overwrites?.bootloader || engine.bootloader
+      ) + (update.overwrites?.profilePath || engine.profilePath);
+
+    try {
+      // Delete the previous utils
+      await IOUtils.remove(PathUtils.join(ucAPI.utils.chromeDir, "utils"), { recursive: true });
+      // Update utils
+      await ucAPI.unpackRemoteArchive({
+        url: profileLink,
+        zipPath: PathUtils.join(ucAPI.utils.chromeDir, "profile.zip"),
+        extractDir: ucAPI.utils.chromeDir,
+      });
+
+      // Delete the previous engine
+      await IOUtils.remove(utils.jsDir, { recursive: true });
+      // Update engine
+      await ucAPI.unpackRemoteArchive({
+        url: engineLink,
+        zipPath: PathUtils.join(ucAPI.utils.chromeDir, "engine.zip"),
+        extractDir: ucAPI.utils.chromeDir,
+      });
+    } catch (err) {
+      throw new Error(`Error updating Sine`, { cause: err });
+    }
+  },
+
+  /**
+   * Updates Sine with it's auto-updater.
+   *
+   * @param {object} engine - Entire engine.json object, including the update.
+   * @param {object} update - Update to be installed.
+   */
+  async execUpdate(engine, update) {
+    const updateLink = engine.releaseLink.replace("{version}", update.version) + this.updaterName;
+    try {
+      let browserPath = Services.dirsvc.get("XREExeF", Ci.nsIFile).parent.path;
+
+      // Fix snap install location
+      if (browserPath.startsWith("/snap/firefox/")) {
+        browserPath = "/etc/firefox";
+      }
+
+      // Create identifier to determine when update is complete.
+      const identifierPath = PathUtils.join(ucAPI.utils.chromeDir, "update");
+      await IOUtils.writeUTF8(identifierPath, "");
+
+      const exePath = PathUtils.join(this.tmpFolder, this.updaterName);
+
+      // Download updater (utf8, batch and shell scripts).
+      const resp = await ucAPI.fetch(updateLink);
+      await IOUtils.writeUTF8(exePath, resp);
+
+      // Set file as an executable on Unix-like systems.
+      if (ucAPI.utils.os !== "win") {
+        const exe = FileUtils.File(exePath);
+        exe.permissions = 0o755;
+      }
+
+      const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+      file.initWithPath(exePath);
+
+      const proc = Cc["@mozilla.org/process/util;1"].createInstance(Ci.nsIProcess);
+      proc.init(file);
+
+      const args = [
+        "-s",
+        "--browser",
+        browserPath,
+        "--profile",
+        PathUtils.profileDir,
+        "--bootloader",
+        update.bootloader || engine.bootloader,
+        "--version",
+        update.version,
+      ];
+      // Type 1 means no bootloader updates
+      if (update.type === 1) {
+        args.push("--no-boot");
+      }
+
+      proc.run(false, args, args.length);
+
+      // Wait until updater is complete using identifier.
+      await new Promise((resolve) => {
+        const checkExistence = async () => {
+          if (await IOUtils.exists(identifierPath)) {
+            setTimeout(checkExistence, 500);
+          } else {
+            resolve();
+          }
+        };
+        checkExistence();
+      });
+
+      // Delete the executable as well as potential log files
+      await IOUtils.remove(this.tmpFolder, { recursive: true });
+    } catch (err) {
+      console.error(`Error updating Sine: ${err}`);
+    }
+  },
+
+  /**
+   * Updates the Sine engine, delegating the process to either a zip-based update or an
+   * installer-based one.
+   *
+   * @param {object} engine - Entire engine.json object, including the update.
+   * @param {object} update - Update to be installed.
+   * @returns {boolean} Always true if update succeeded.
+   */
+  async updateEngine(engine, update) {
+    Services.appinfo.invalidateCachesOnRestart();
+
+    if (update.type === 0) {
+      this.zipUpdate(engine, update);
+    } else {
+      await this.execUpdate(engine, update);
+    }
+
+    const readableVersion = this.toReadable(update.version);
+
+    ucAPI.showToast({
+      id: "5",
+      version: readableVersion,
+    });
+
+    this.current = readableVersion;
+    Services.prefs.setBoolPref("sine.engine.pending-restart", true);
+
+    return true;
+  },
+
+  /**
+   * Returns latest engine data from the Sine repository.
+   *
+   * @returns {object} Latest engine data.
+   */
+  async fetch() {
+    return await ucAPI
+      .fetch(
+        "https://raw.githubusercontent.com/CosmoCreeper/Sine/" +
+          (Services.prefs.getBoolPref("sine.is-cosine", false) ? "cosine" : "main") +
+          "/engine.json"
+      )
+      .catch((err) => console.warn(err));
+  },
+
+  /**
+   * Determines if a semantic vesrion is newer than another.
+   *
+   * @param {string} newVersion - Tag of version to check.
+   * @param {string} originalVersion - Tag of current version.
+   * @returns {boolean} True if version to check is newer than current.
+   */
+  isNewer(newVersion, originalVersion) {
+    newVersion = this.convertToParts(newVersion);
+    originalVersion = this.convertToParts(originalVersion);
+
+    for (let i = 0; i < newVersion.length; i++) {
+      if (newVersion[i] > originalVersion[i]) {
+        return true;
+      }
+    }
+
+    // Removable: 2 updates after v2.3.3
+    /*
+     * Older versions may have fewer segments (vX.X.X vs vX.X.X.X).
+     * When orig[i] is undefined, `new[i] > undefined` is always false in JS,
+     * so this case must be handled explicitly for backwards compatibility.
+     */
+    if (originalVersion.length < newVersion.length) {
+      return true;
+    }
+
+    return false;
+  },
+
+  /**
+   * Checks for updates.
+   *
+   * @param {boolean} isManualTrigger - True if update was triggered manually.
+   */
+  async checkForUpdates(isManualTrigger = false) {
+    if (!this.current) {
+      await this.init();
+    }
+
+    const engine = await this.fetch();
+
+    /*
+     * Find the first version to update to.
+     * The version array is stored from latest to oldest for ease, and must be reversed.
+     */
+    let toUpdate;
+    for (const update of engine.updates.toReversed()) {
+      if (this.isNewer(update.version, this.current)) {
+        toUpdate = update;
+        break;
+      }
+    }
+
+    if (
+      engine &&
+      toUpdate &&
+      (Services.prefs.getBoolPref("sine.engine.auto-update", true) || isManualTrigger)
+    ) {
+      await this.updateEngine(engine, toUpdate);
+      return;
+    }
+
+    this.latest = engine.updates[0].version;
+  },
+};

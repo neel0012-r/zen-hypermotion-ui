@@ -1,0 +1,162 @@
+/**
+ * @file Injects a command palette into the browser's main window.
+ * @license
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+import * as domUtils from "../utils/dom.mjs";
+
+const manager = ChromeUtils.importESModule(
+  "chrome://userscripts/content/core/manager.sys.mjs"
+).default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.sys.mjs").default;
+const ucAPI = ChromeUtils.importESModule(
+  "chrome://userscripts/content/utils/uc_api.sys.mjs"
+).default;
+
+export default {
+  // TODO: Split into several functions
+  /** Registers and injects the command palette. */
+  register() {
+    if (!Services.prefs.getBoolPref("sine.enable-dev", false)) {
+      return;
+    }
+
+    domUtils.injectLocale("sine-cmdpalette", windowRoot.window.document);
+
+    const palette = domUtils.appendXUL(
+      windowRoot.window.document.body,
+      `
+              <div class="sineCommandPalette" hidden="">
+                  <div class="sineCommandInput" hidden=""></div>
+                  <div class="sineCommandSearch">
+                      <input type="text" data-l10n-id="sine-cmd-placeholder" data-l10n-attrs="placeholder"/>
+                      <hr/>
+                      <div></div>
+                  </div>
+              </div>
+          `
+    );
+
+    const contentDiv = palette.querySelector(".sineCommandInput");
+    const searchDiv = palette.querySelector(".sineCommandSearch");
+    const input = searchDiv.querySelector("input");
+    const optionsContainer = searchDiv.querySelector("div");
+
+    const revealModOptions = async () => {
+      const openModFolder = (modId) => {
+        const modFolder = utils.getModFolder(modId);
+        ucAPI.showInFileManager(modFolder);
+      };
+
+      const mods = await utils.getMods();
+      const modOptions = Object.values(mods).map((mod) => {
+        return { label: mod.name, action: () => openModFolder(mod.id) };
+      });
+      refreshCmds(modOptions);
+    };
+
+    const options = [
+      {
+        id: "sine-cmd-refresh-mod-styles",
+        action: () => manager.rebuildMods(),
+      },
+      {
+        id: "sine-cmd-open-mod-folder",
+        action: () => revealModOptions(),
+        hide: false,
+      },
+    ];
+
+    const searchOptions = () => {
+      for (const child of optionsContainer.children) {
+        if (child.textContent.toLowerCase().includes(input.value.toLowerCase())) {
+          child.removeAttribute("hidden");
+        } else {
+          child.setAttribute("hidden", "");
+        }
+      }
+      optionsContainer.querySelector("[selected]")?.removeAttribute("selected");
+      optionsContainer.querySelector(":not([hidden])").setAttribute("selected", "");
+    };
+
+    const closePalette = () => {
+      palette.setAttribute("hidden", "");
+      input.value = "";
+      searchOptions();
+    };
+
+    const refreshCmds = (newOptions) => {
+      optionsContainer.innerHTML = "";
+
+      for (const option of newOptions) {
+        const optionBtn = domUtils.appendXUL(
+          optionsContainer,
+          `<button>${option.label ?? ""}</button>`
+        );
+
+        optionBtn.dataset.l10nId = option.id;
+
+        optionBtn.addEventListener("click", () => {
+          option.action();
+          input.value = "";
+          if (!Object.hasOwn(option, "hide") || option.hide) {
+            closePalette();
+          }
+        });
+      }
+
+      optionsContainer.children[0].setAttribute("selected", "");
+    };
+
+    refreshCmds(options);
+
+    input.addEventListener("input", searchOptions);
+    input.addEventListener("keydown", (e) => {
+      const selectedChild = optionsContainer.querySelector(":not([hidden])[selected]");
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        let newSelectedChild;
+        if (e.key === "ArrowUp") {
+          newSelectedChild =
+            selectedChild.previousElementSibling || selectedChild.parentElement.lastElementChild;
+        } else {
+          newSelectedChild =
+            selectedChild.nextElementSibling || selectedChild.parentElement.firstElementChild;
+        }
+        newSelectedChild.setAttribute("selected", "");
+        selectedChild.removeAttribute("selected");
+      } else if (e.key === "Enter") {
+        selectedChild.click();
+      }
+    });
+
+    windowRoot.window.document.addEventListener("keydown", (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === "Y") {
+        refreshCmds(options);
+
+        palette.removeAttribute("hidden");
+        contentDiv.setAttribute("hidden", "");
+        searchDiv.removeAttribute("hidden");
+
+        // Wait animation time.
+        setTimeout(() => input.focus(), 350);
+      } else if (e.key === "Escape") {
+        closePalette();
+      }
+    });
+
+    windowRoot.window.document.addEventListener("mousedown", (e) => {
+      let targetEl = e.target;
+      while (targetEl) {
+        if (targetEl === palette) {
+          return;
+        }
+        targetEl = targetEl.parentNode;
+      }
+
+      closePalette();
+    });
+  },
+};
